@@ -1,16 +1,16 @@
-# AI 3D → 拓竹（Bambu Lab）
+# 想啥印啥 · Thought to 3D Print
 
 > 一句话，生成一个能直接在你拓竹 App 里打开的 3D 模型。
 
-给 AI 编程助手用的技能（Skill）：**文生图 → 去水印 → 图生3D → 摆正 → 在 Bambu Studio 里打开**，全自动。
+给 AI 助手用的一份技能（Skill）：**文生图 → 去水印 → 图生3D → 摆正 → 在 Bambu Studio 里打开**。
 
-不用会建模。不用会写代码。
+不用会建模。不用会写代码。**不用装任何东西。**
 
 ---
 
 ## 这是什么
 
-如果你用过 Claude Code、WorkBuddy、Cursor 这类 AI 编程助手，你可能知道它们能读写文件、能调工具。**Skill（技能）就是给它们装的一份"专业操作手册"** —— 装上之后，你只要说一句"帮我把这只猫做成 3D 模型并在拓竹里打开"，它就知道该按什么步骤做、该注意什么坑。
+Skill（技能）可以理解成给 AI 助手装的一份"专业操作手册"——装上之后，你只要说一句"帮我把这只猫做成 3D 模型并在拓竹里打开"，它就知道该按什么步骤做、该注意什么坑。
 
 这个仓库就是一份这样的手册，专门管**从想法到 3D 打印模型**这一段。
 
@@ -22,7 +22,7 @@
 
 ✅ 自动处理：背景纯净度、水印、模型摆放姿态、文件格式
 
-✅ 避开常见的坑：模型尺寸超机器、材质参数浪费、格式不兼容
+✅ 避开常见的坑：模型尺寸超机器、参数设置浪费材料、格式不兼容
 
 ---
 
@@ -30,48 +30,33 @@
 
 ❌ **不做切片。**
 
-终点停在"模型在拓竹 App 里打开"。切片（把模型切成打印机认识的指令）留给你在 App 里手动点——那里的操作只要几秒钟，但让 AI 全自动做反而容易出问题。
+终点停在「模型在拓竹 App 里打开」。切片（把模型切成打印机认识的指令）不在范围内，在 App 里完成即可。
 
-**你会发现模型打开后，剩下的就是调参数、加支撑、点切片，跟平常一样。**
+**模型打开后，剩下的就是调参数、加支撑、点切片，跟平常一样。**
 
 ---
 
 ## 安装（约 1 分钟）
 
-### 第 1 步：把 skill 放进对应目录
+### 前置条件只有一条
 
-**Claude Code**
+你的电脑上装了**拓竹的 Bambu Studio**（下载：https://bambulab.cn/download）。
 
-```bash
-mkdir -p ~/.claude/skills/ai-3d-to-bambu
-curl -o ~/.claude/skills/ai-3d-to-bambu/SKILL.md \
-  https://raw.githubusercontent.com/WILLBETHEKINGSOONORLATER/ai-3d-to-bambu/main/SKILL.md
-```
+**除此之外不需要任何东西**——不需要装 Python，不需要装任何库，不需要打开终端。
+
+### 把 skill 放进目录
 
 **WorkBuddy**
 
 ```bash
-mkdir -p ~/.workbuddy/skills/ai-3d-to-bambu
-curl -o ~/.workbuddy/skills/ai-3d-to-bambu/SKILL.md \
-  https://raw.githubusercontent.com/WILLBETHEKINGSOONORLATER/ai-3d-to-bambu/main/SKILL.md
+mkdir -p ~/.workbuddy/skills/thought-to-3d-print
+curl -o ~/.workbuddy/skills/thought-to-3d-print/SKILL.md \
+  https://raw.githubusercontent.com/WILLBETHEKINGSOONORLATER/thought-to-3d-print/main/SKILL.md
 ```
 
-**其他工具**：放进它读取 skill 的目录即可，文件名必须叫 `SKILL.md`。
-或者更简单——**下载 `SKILL.md` 文件，手动拖进对应文件夹**。
+**更简单的方式**：把 `SKILL.md` 文件直接**拖进你的 AI 助手**，让它自己装。
 
-### 第 2 步：装一个 Python 库
-
-打开终端（Mac 的"终端"/Windows 的"PowerShell"），粘贴：
-
-```bash
-pip install trimesh
-```
-
-> `trimesh` 是一个处理 3D 模型的工具库，用来把模型摆正、转格式。
-
-### 第 3 步：确认你有拓竹切片软件
-
-如果还没装：https://bambulab.cn/download
+**其他 AI 工具**：放进它读取 skill 的目录即可，文件名必须叫 `SKILL.md`。
 
 ---
 
@@ -125,10 +110,10 @@ A：正常，直接在 App 里点修复就行，不影响打印。
 A：多半是第一步的参考图没画好。让助手重画——**白底、单主体、正面视角、无遮挡**，这几点最关键。
 
 **Q：我完全不懂 AI 工具，能用吗？**
-A：这份 skill 需要你先有一个 AI 编程助手（Claude Code / WorkBuddy / Cursor 等）。如果你还没有，建议先试试这类工具，上手比想象中简单。
+A：这份 skill 需要你先有一个能装 skill 的 AI 助手（比如 WorkBuddy）。如果你还没有，建议先试试，上手比想象中简单。
 
 **Q：能自动出打印文件吗？**
-A：故意不做。原因见上面"它不做什么"。
+A：不在范围内。原因见上面「它不做什么」。
 
 ---
 
@@ -138,10 +123,6 @@ A：故意不做。原因见上面"它不做什么"。
 
 - 部分机型的可打印高度会被误读成固定值，大模型直接切不出来，报错信息还会误导你去改模型
 - 多喷嘴机型（如 H2C、H2D）的耗材映射在命令行下会失败
-
-而这些操作，**人在 App 里点两下就完成了**。
-
-**把不可靠的自动化换成几秒钟的人工操作，是更划算的交易。**
 
 ---
 

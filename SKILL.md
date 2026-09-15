@@ -1,10 +1,10 @@
 ---
-name: ai-3d-to-bambu
-description: 把「文生图 → 图生3D → 在 Bambu Studio（拓竹切片软件）里打开」这条链路一次走通。适用于想把 AI 生成的 3D 模型直接送到拓竹 App 里查看、调参、打印的场景。边界明确：交付到「模型在拓竹 App 里成功打开」为止，不做切片。Works for turning a text prompt into a 3D model opened in Bambu Studio.
+name: thought-to-3d-print
+description: 想啥印啥 —— 把「文生图 → 图生3D → 在 Bambu Studio（拓竹切片软件）里打开」一次走通。适用于想把 AI 生成的 3D 模型直接送到拓竹 App 里查看、调参、打印的场景。边界明确：交付到「模型在拓竹 App 里成功打开」为止，不做切片。零依赖，不需要用户安装任何 Python 库。Turn a text prompt into a 3D model opened in Bambu Studio, with no extra dependencies.
 agent_created: true
 ---
 
-# 从一句话到拓竹 3D 模型
+# 想啥印啥 · 从一句话到拓竹 3D 模型
 
 输入一句描述，输出一个能在 Bambu Studio（拓竹的桌面端切片软件）里直接打开的 3D 模型。
 
@@ -16,25 +16,17 @@ agent_created: true
 
 **不做**：**切片（slicing）**。
 
-终点刻意停在"App 打开"。原因：命令行切片有一堆只在无界面自动化时才会踩的坑（打印体积被压成固定值、多喷嘴机型耗材映射失败等），留在 App 里手动点两下就完全绕开了。**把不可靠的自动化换成几秒钟的人工操作，是更划算的交易。**
+终点停在"App 打开"。切片（把模型切成打印机认识的指令）交给用户在 App 里完成——那部分操作在图形界面里更顺手。
 
 ---
 
-## 前置条件
+## ⚠️ 前置条件只有一条
 
-| 需要 | 说明 |
-|---|---|
-| **Bambu Studio** | 拓竹官方切片软件，免费下载：https://bambulab.cn/download |
-| **Python 3.9+** | 用来做模型摆正和格式转换 |
-| **trimesh** | `pip install trimesh`（三维网格处理库） |
-| **文生图能力** | 任意 AI 画图工具（本章节 §2 有选型建议） |
-| **图生3D 能力** | 任意 image-to-3D 服务（§4 有选型建议） |
+**用户的电脑上只需要装了拓竹 App（Bambu Studio）。**
 
-先跑一句自检，确认环境就绪：
+**绝对不要要求用户安装 Python 库、pip、trimesh 等任何东西。** 面向的是不懂技术的用户，任何"打开终端粘贴命令"的要求都会劝退他们。
 
-```bash
-python3 -c "import trimesh; print('trimesh', trimesh.__version__)"
-```
+本 skill 自带的摆正脚本是**纯 Python 标准库**写的（只用 `struct` / `os` / `sys`），系统自带的 Python 就能跑。执行方式见第 4 步。
 
 ---
 
@@ -42,7 +34,7 @@ python3 -c "import trimesh; print('trimesh', trimesh.__version__)"
 
 **不同拓竹机型的打印体积差别很大，这一步决定后面模型是否超尺寸。**
 
-需要问清：**机型** + **喷嘴直径**（0.2 / 0.4 / 0.6 / 0.8 mm，默认 0.4）。
+只需要问一件事：**你的打印机是什么型号？**（喷嘴直径默认 0.4mm，用户不懂就别问）
 
 ### 拓竹机型打印体积速查
 
@@ -55,9 +47,9 @@ python3 -c "import trimesh; print('trimesh', trimesh.__version__)"
 | H2D | 350×320×320 mm |
 | H2C | 330×320×320 mm |
 
-> 体积数据请以拓竹官网最新规格为准，机型迭代较快。
+> 机型迭代较快，以拓竹官网最新规格为准。
 
-模型生成后，**先拿尺寸对照这张表**，装不下就提前告诉用户，别等他切片时才发现。
+模型生成后，**拿尺寸对照这张表**，装不下就提前告诉用户。
 
 ---
 
@@ -65,7 +57,7 @@ python3 -c "import trimesh; print('trimesh', trimesh.__version__)"
 
 这是整条链路里**最容易被做错、又最影响最终质量**的一步。
 
-图生3D 是从**像素**推断**几何**的，所以喂进去的图必须让几何信息尽可能清晰：
+图生3D 是从**像素**推断**几何**的，喂进去的图必须让几何信息尽可能清晰：
 
 | 要 | 不要 |
 |---|---|
@@ -84,160 +76,202 @@ python3 -c "import trimesh; print('trimesh', trimesh.__version__)"
 
 图上的水印、签名、logo，会被当成**真实几何**融进 3D 模型的表面，生成之后基本清不掉。
 
-用你手边的图像编辑能力（钢笔/修补/生成式填充均可）处理干净，再进下一步。
-
-**这一步没有捷径，但代价极小，收益极高。**
+用图像编辑能力（修补 / 生成式填充均可）处理干净，再进下一步。
 
 ---
 
 ## 第 3 步：图生3D —— 关键在参数选择
 
-用任意 image-to-3D 服务。以下是**通用的参数原则**，各家服务命名略有差异，但概念一致：
+用可用的 image-to-3D 服务。以下是**通用的参数原则**，各家命名略有差异，概念一致：
 
 | 参数 | 该选什么 | 为什么 |
 |---|---|---|
 | **生成类型** | **白模 / Geometry**（纯几何，无纹理） | 实体打印只消耗形状。PBR（物理基础渲染材质，控制金属感、粗糙度等表面外观）对打印**完全无用**，只会拖慢生成、虚高面数、撑大文件 |
 | **输出格式** | **STL** | 拓竹 App 能直接打开，一步到位无需转换 |
-| **面数** | 默认值即可，要更精细再上调 | 打印精度受喷嘴限制（0.4mm 喷嘴下，几十万面已经远超需要） |
+| **面数** | 默认值即可 | 打印精度受喷嘴限制（0.4mm 喷嘴下，几十万面已远超需要） |
 
-**图片过大时**，先压缩再上传（多数服务有体积上限），这一步通常需要转 base64 编码。
+**图片过大时**先压缩再上传（多数服务有体积上限）。
 
-> 服务选型参考：腾讯混元 3D、Meshy、Tripo、Rodin 等均可，选你能用上的即可。核心看是否支持**白模输出**和 **STL 导出**。
+> 服务选型参考：腾讯混元 3D、Meshy、Tripo、Rodin 等。核心看是否支持**白模输出**和 **STL 导出**。
 
 生成通常需要 1~5 分钟。
 
 ---
 
-## 第 4 步：摆正（强烈推荐）
+## 第 4 步：摆正（用下面的脚本，不要装库）
 
-AI 生成的模型原点位置是随机的，经常有一半在"地面"以下。摆正后交付，用户在 App 里看到的就是规规矩矩站在打印板上的样子。
+AI 生成的模型原点位置是随机的，经常有一半在"地面"以下。跑一遍脚本就正了。
+
+**执行方式**：把下面这段代码原样写到临时文件（例如 `/tmp/stl_fix.py`），然后运行（本 skill 目录下 `scripts/stl_fix.py` 有同一份文件，直接复制更省事）：
+
+```bash
+python3 /tmp/stl_fix.py 模型.stl
+```
+
+Windows 上用 `python` 代替 `python3`。如果系统没有 Python 命令，跳过本步即可——**模型不摆正也能在拓竹 App 里正常打开，用户手动拖一下就行，不要为此让用户去装 Python。**
+
+### 脚本代码（纯标准库，零依赖）
 
 ```python
-import trimesh
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""把 STL 摆正：XY 居中，最低点贴地(z=0)。纯标准库，无需安装任何库。
+用法: python3 stl_fix.py 模型.stl [输出.stl]"""
+import os, struct, sys
 
-m = trimesh.load('model.stl', force='mesh')
-m.apply_translation([                      # XY 居中 + 最低点贴地面
-    -(m.bounds[0][0] + m.bounds[1][0]) / 2,
-    -(m.bounds[0][1] + m.bounds[1][1]) / 2,
-    -m.bounds[0][2],
-])
-m.units = 'millimeter'                     # 导出 3MF 时会写入单位声明
-m.export('model_onbed.stl')
+HEADER_SIZE, COUNT_SIZE, TRIANGLE_SIZE = 80, 4, 50
+
+
+def read_binary_stl(path):
+    with open(path, 'rb') as f:
+        raw = f.read()
+    if len(raw) < HEADER_SIZE + COUNT_SIZE:
+        raise ValueError('文件太小，不像有效的 STL')
+    header = raw[:HEADER_SIZE]
+    count = struct.unpack('<I', raw[HEADER_SIZE:HEADER_SIZE + COUNT_SIZE])[0]
+    if len(raw) != HEADER_SIZE + COUNT_SIZE + count * TRIANGLE_SIZE:
+        raise ValueError('不是二进制 STL（可能是 ASCII 格式），请导出时选「二进制/Binary STL」')
+    return header, count, raw[HEADER_SIZE + COUNT_SIZE:]
+
+
+def bounds(body):
+    lo = [float('inf')] * 3
+    hi = [float('-inf')] * 3
+    for v in struct.iter_unpack('<12fH', body):
+        for i in (3, 6, 9):                      # 三个顶点
+            for a in range(3):
+                c = v[i + a]
+                if c < lo[a]: lo[a] = c
+                if c > hi[a]: hi[a] = c
+    return lo, hi
+
+
+def shift(body, d):
+    out = bytearray()
+    for v in struct.iter_unpack('<12fH', body):
+        out += struct.pack(
+            '<12fH',
+            v[0], v[1], v[2],                                    # 法向量不动
+            v[3] + d[0], v[4] + d[1], v[5] + d[2],
+            v[6] + d[0], v[7] + d[1], v[8] + d[2],
+            v[9] + d[0], v[10] + d[1], v[11] + d[2],
+            v[12],
+        )
+    return bytes(out)
+
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__); sys.exit(1)
+    src = sys.argv[1]
+    base, ext = os.path.splitext(src)
+    dst = sys.argv[2] if len(sys.argv) > 2 else base + '_onbed' + (ext or '.stl')
+
+    header, count, body = read_binary_stl(src)
+    lo, hi = bounds(body)
+    size = [hi[i] - lo[i] for i in range(3)]
+    print('原始尺寸：%.1f x %.1f x %.1f mm' % tuple(size))
+    print('三角面数：%d' % count)
+
+    d = (-(lo[0] + hi[0]) / 2.0, -(lo[1] + hi[1]) / 2.0, -lo[2])
+    print('平移量：dx=%.2f dy=%.2f dz=%.2f' % d)
+
+    with open(dst, 'wb') as f:
+        f.write(header)
+        f.write(struct.pack('<I', count))
+        f.write(shift(body, d))
+    print('已保存：' + dst)
+    print('现在模型 %.1f x %.1f x %.1f mm，居中立在打印板上。' % tuple(size))
+
+
+if __name__ == '__main__':
+    main()
 ```
+
+**脚本会输出模型的长宽高**——顺手就拿这个数字去对照第 0 步的机型表，不用再单独查尺寸。
 
 ---
 
-## 第 5 步：导出并在拓竹 App 里打开
+## 第 5 步：在拓竹 App 里打开
 
 ### 支持格式
 
 拓竹 App 可直接打开：**STL / AMF / 3MF / GCODE**
 
-### STL 还是 3MF？
-
-| 格式 | 特点 |
-|---|---|
-| STL | 图生3D 服务可直接输出，一步到位；纯几何、不带单位 |
-| **3MF** | **体积小约 60%**，可带单位 / 多零件 / 摆位信息 |
-
-**做法**：主交付用服务直接出的 STL；需要更小文件或保留多零件结构时，顺手转一份 3MF 一起给。
-
-```python
-import trimesh
-m = trimesh.load('model.stl', force='mesh')
-m.units = 'millimeter'      # 不设这行，3MF 里不会写单位
-m.export('model.3mf')
-```
+STL 是图生3D 服务能直接输出的格式，一步到位，**默认就用它**。
 
 ### 打开命令
 
 **macOS**：
 
 ```bash
-open -g -a BambuStudio "/绝对路径/model.3mf"
+open -g -a BambuStudio "/绝对路径/模型.stl"
 ```
 
 **Windows**：
 
 ```powershell
-& "C:\Program Files\Bambu Studio\bambu-studio.exe" "C:\路径\model.3mf"
+& "C:\Program Files\Bambu Studio\bambu-studio.exe" "C:\路径\模型.stl"
 ```
 
-> macOS 的 `-g` 表示后台打开、**不抢焦点**，不会打断用户当前操作。
-> 若 `open -a BambuStudio` 找不到应用，改用 `open -a "Bambu Studio"`。
-
----
-
-## 交付前自检
-
-用拓竹 App 自带的命令行体检（Mac 路径；Windows 换成本机安装路径）：
-
-```bash
-"/Applications/BambuStudio.app/Contents/MacOS/BambuStudio" --info model.stl
-```
-
-会输出尺寸、面数、是否流形、开放边数、零件数、体积。
-
-### 只看这两项
-
-| 指标 | 用途 |
-|---|---|
-| `size_x / size_y / size_z` | 对照机型打印体积表，判断装不装得进用户的机器 |
-| `volume` | 估算耗材用量 |
-
-### 这几项难看也别管
-
-**面数、开放边数（破洞）、零件数（碎块）——实测都不影响在拓竹 App 里打开和使用。**
-
-实测验证：一个含 **418 条开放边、32 个独立碎块**的网格文件，在拓竹 App 里完全正常。不要因为这些数字难看就反复修模型，那是纯粹浪费功夫。
+> macOS 的 `-g` 表示后台打开、不抢焦点，不会打断用户当前操作。
+> 若提示找不到应用，改用 `open -a "Bambu Studio"`。
 
 ---
 
 ## 交付时顺手给用户的切片建议
 
-模型打开后用户要自己切片，这三组参数有实测依据：
+模型打开后用户要自己切片，这几组参数有实测依据：
 
 | 参数 | 建议值 |
 |---|---|
 | 层高 | 0.20mm Standard |
 | 填充 | 10%（摆件类）/ 15~20%（受力件） |
-| **支撑** | **树状（自动），阈值 30°，勾「移除小悬空」** |
+| **支撑** | **树状（自动）** |
 
 **支撑选型实测对比**（同一模型，0.2mm 层高）：
 
 | 方案 | 耗时 |
 |---|---|
 | **树状支撑** | **2h37m** ← 最优 |
-| 无支撑 | 2h39m（且悬空报警，有塌陷风险） |
+| 无支撑 | 2h39m（有塌陷风险） |
 | 普通支撑 | 3h40m |
-
-树状同时赢下速度、用料和表面质量。
 
 **材料选择**：
 
 | 材料 | 适用 |
 |---|---|
 | PLA | 摆件、展示件（脆、耐热 55~60℃，别放车里） |
-| PETG | 需要一定韧性和耐热的场合（耐热 70~80℃） |
+| PETG | 需要韧性和耐热的场合（耐热 70~80℃） |
+
+---
+
+## 关于模型质量：不要过度加工
+
+实测结论：**面数、开放边数（破洞）、零件数（碎块）都不影响在拓竹 App 里打开和使用。**
+
+验证数据：一个含 **418 条开放边、32 个独立碎块**的网格文件，在拓竹 App 里完全正常。
+
+**不要因为这些指标难看就反复修模型、重新生成或做网格清理**——那是纯粹浪费用户的时间和 AI 额度。模型能打开、尺寸对、形状是用户要的，就够了。
 
 ---
 
 ## 常见问题
 
-**Q：打开的模型姿态是歪的 / 陷进板子里？**
-A：图生3D 服务的原点位置随机。回到第 4 步做摆正再交付。
+**Q：模型打开是歪的 / 陷进板子里？**
+A：跑第 4 步的脚本。跑不了也没关系，用户在 App 里拖一下即可。
 
-**Q：模型在 App 里显示红色 / 提示需要修复？**
-A：通常是网格自交或非流形。多数情况**不影响打印**，直接在 App 里点修复即可，不用回头改模型。
+**Q：模型显示红色 / 提示需要修复？**
+A：正常。在 App 里点修复就行，不影响打印。
 
-**Q：生成的模型细节糊成一团？**
+**Q：生成的模型糊成一团？**
 A：多半是第 1 步的输入图问题（背景杂乱、角度刁钻、主体被遮挡）。回去重画参考图，比在 3D 阶段补救有效得多。
 
 **Q：模型太大了？**
-A：回到第 0 步的机型表核对。缩小可用 trimesh：`m.apply_scale(0.5)`，或直接在 App 里缩放。
+A：对照第 0 步的机型表。装不下就在拓竹 App 里缩放，或在图生3D 时减小尺寸参数。
 
-**Q：能不能全自动一步到位出打印文件？**
-A：本 skill 刻意不做。命令行切片在部分机型（尤其多喷嘴机型）上有额外坑，人工在 App 里点两下更稳。
+**Q：用户想要能直接打印的文件？**
+A：说明切片不在本 skill 范围内，引导用户把打开后的模型在 Bambu Studio 里自行切片——界面上点几下就行。
 
 ---
 
