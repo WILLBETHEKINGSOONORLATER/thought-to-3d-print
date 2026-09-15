@@ -45,7 +45,7 @@
 ```bash
 mkdir -p ~/.claude/skills/ai-3d-to-bambu
 curl -o ~/.claude/skills/ai-3d-to-bambu/SKILL.md \
-  https://raw.githubusercontent.com/<你的用户名>/ai-3d-to-bambu/main/SKILL.md
+  https://raw.githubusercontent.com/WILLBETHEKINGSOONORLATER/ai-3d-to-bambu/main/SKILL.md
 ```
 
 **WorkBuddy**
@@ -53,7 +53,7 @@ curl -o ~/.claude/skills/ai-3d-to-bambu/SKILL.md \
 ```bash
 mkdir -p ~/.workbuddy/skills/ai-3d-to-bambu
 curl -o ~/.workbuddy/skills/ai-3d-to-bambu/SKILL.md \
-  https://raw.githubusercontent.com/<你的用户名>/ai-3d-to-bambu/main/SKILL.md
+  https://raw.githubusercontent.com/WILLBETHEKINGSOONORLATER/ai-3d-to-bambu/main/SKILL.md
 ```
 
 **其他工具**：放进它读取 skill 的目录即可，文件名必须叫 `SKILL.md`。
